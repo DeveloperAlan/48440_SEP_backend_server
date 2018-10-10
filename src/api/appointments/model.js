@@ -1,30 +1,13 @@
 import mongoose, { Schema } from 'mongoose'
 
 const appointmentsSchema = new Schema({
-  user: {
-    type: Schema.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  patientId: {
+  timeslotId: {
     type: String
   },
-  doctorId: {
+  notes: {
     type: String
   },
-  date: {
-    type: String
-  },
-  description: {
-    type: String
-  },
-  location: {
-    type: String
-  },
-  completed: {
-    type: String
-  },
-  added: {
+  userId: {
     type: String
   }
 }, {
@@ -40,14 +23,9 @@ appointmentsSchema.methods = {
     const view = {
       // simple view
       id: this.id,
-      user: this.user.view(full),
-      patientId: this.patientId,
-      doctorId: this.doctorId,
-      date: this.date,
-      description: this.description,
-      location: this.location,
-      completed: this.completed,
-      added: this.added,
+      timeslotId: this.timeslotId,
+      notes: this.notes,
+      userId: this.userId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     }
