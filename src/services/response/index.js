@@ -1,5 +1,4 @@
 export const success = (res, status) => (entity) => {
-  console.log(entity)
   if (entity) {
     res.status(status || 200).json(entity)
   }

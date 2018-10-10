@@ -30,7 +30,6 @@ const router = new Router()
  * @apiParam {String[]} [fields] Fields to be returned.
  */
 router.use('/users', user)
-router.use('/users/', user)
 router.use('/auth', auth)
 router.use('/password-resets', passwordReset)
 router.use('/appointments', appointments)
