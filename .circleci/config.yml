@@ -13,6 +13,11 @@ jobs:
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
       - image: circleci/mongo
+      environment:
+        SENDGRID_KEY: key
+        MASTER_KEY: AZ28A8pmKwEthBBE40jBqoCAoT84pbG1
+        JWT_SECRET: RfromfgnUBvUV7OTUB8tsZkLOziGMZuE
+
 
     working_directory: ~/repo
 
