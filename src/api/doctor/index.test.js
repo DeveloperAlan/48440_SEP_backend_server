@@ -1,398 +1,119 @@
 import request from 'supertest'
 import { masterKey, apiRoot } from '../../config'
-import { signSync } from '../../services/jwt'
 import express from '../../services/express'
 import routes, { Doctor } from '.'
 
 const app = () => express(apiRoot, routes)
 
-let doctor1, doctor2, admin, session1, session2, adminSession
+let doctor
 
 beforeEach(async () => {
-  doctor1 = await Doctor.create({ name: 'doctor', email: 'a@a.com', password: '123456' })
-  doctor2 = await Doctor.create({ name: 'doctor', email: 'b@b.com', password: '123456' })
-  admin = await Doctor.create({ email: 'c@c.com', password: '123456', role: 'admin' })
-  session1 = signSync(doctor1.id)
-  session2 = signSync(doctor2.id)
-  adminSession = signSync(admin.id)
-})
-
-test('GET /doctors 200 (admin)', async () => {
-  const { status, body } = await request(app())
-    .get(apiRoot)
-    .query({ access_token: adminSession })
-  expect(status).toBe(200)
-  expect(Array.isArray(body.rows)).toBe(true)
-  expect(Number.isNaN(body.count)).toBe(false)
-})
-
-test('GET /doctors?page=2&limit=1 200 (admin)', async () => {
-  const { status, body } = await request(app())
-    .get(apiRoot)
-    .query({ access_token: adminSession, page: 2, limit: 1 })
-  expect(status).toBe(200)
-  expect(Array.isArray(body.rows)).toBe(true)
-  expect(Number.isNaN(body.count)).toBe(false)
-  expect(body.rows.length).toBe(1)
-})
-
-test('GET /doctors?q=doctor 200 (admin)', async () => {
-  const { status, body } = await request(app())
-    .get(apiRoot)
-    .query({ access_token: adminSession, q: 'doctor' })
-  expect(status).toBe(200)
-  expect(Array.isArray(body.rows)).toBe(true)
-  expect(Number.isNaN(body.count)).toBe(false)
-  expect(body.rows.length).toBe(2)
-})
-
-test('GET /doctors?fields=name 200 (admin)', async () => {
-  const { status, body } = await request(app())
-    .get(apiRoot)
-    .query({ access_token: adminSession, fields: 'name' })
-  expect(status).toBe(200)
-  expect(Array.isArray(body.rows)).toBe(true)
-  expect(Number.isNaN(body.count)).toBe(false)
-  expect(Object.keys(body.rows[0])).toEqual(['id', 'name'])
-})
-
-test('GET /doctors 401 (doctor)', async () => {
-  const { status } = await request(app())
-    .get(apiRoot)
-    .query({ access_token: session1 })
-  expect(status).toBe(401)
-})
-
-test('GET /doctors 401', async () => {
-  const { status } = await request(app())
-    .get(apiRoot)
-  expect(status).toBe(401)
-})
-
-test('GET /doctors/me 200 (doctor)', async () => {
-  const { status, body } = await request(app())
-    .get(apiRoot + '/me')
-    .query({ access_token: session1 })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.id).toBe(doctor1.id)
-})
-
-test('GET /doctors/me 401', async () => {
-  const { status } = await request(app())
-    .get(apiRoot + '/me')
-  expect(status).toBe(401)
-})
-
-test('GET /doctors/:id 200', async () => {
-  const { status, body } = await request(app())
-    .get(`${apiRoot}/${doctor1.id}`)
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.id).toBe(doctor1.id)
-})
-
-test('GET /doctors/:id 404', async () => {
-  const { status } = await request(app())
-    .get(apiRoot + '/123456789098765432123456')
-  expect(status).toBe(404)
+  doctor = await Doctor.create({})
 })
 
 test('POST /doctors 201 (master)', async () => {
   const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com', password: '123456' })
+    .post(`${apiRoot}`)
+    .send({ access_token: masterKey, email: 'test', password: 'test', name: 'test', picture: 'test', specialties: 'test', qualifications: 'test', rating: 'test' })
   expect(status).toBe(201)
-  expect(typeof body).toBe('object')
-  expect(typeof body.doctor).toBe('object')
-  expect(typeof body.token).toBe('string')
-  expect(body.doctor.email).toBe('d@d.com')
-})
-
-test('POST /doctors 201 (master)', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com', password: '123456', role: 'doctor' })
-  expect(status).toBe(201)
-  expect(typeof body).toBe('object')
-  expect(typeof body.doctor).toBe('object')
-  expect(typeof body.token).toBe('string')
-  expect(body.doctor.email).toBe('d@d.com')
-})
-
-test('POST /doctors 201 (master)', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com', password: '123456', role: 'admin' })
-  expect(status).toBe(201)
-  expect(typeof body).toBe('object')
-  expect(typeof body.doctor).toBe('object')
-  expect(typeof body.token).toBe('string')
-  expect(body.doctor.email).toBe('d@d.com')
-})
-
-test('POST /doctors 409 (master) - duplicated email', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'a@a.com', password: '123456' })
-  expect(status).toBe(409)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('email')
-})
-
-test('POST /doctors 400 (master) - invalid email', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'invalid', password: '123456' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('email')
-})
-
-test('POST /doctors 400 (master) - missing email', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, password: '123456' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('email')
-})
-
-test('POST /doctors 400 (master) - invalid password', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com', password: '123' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('password')
-})
-
-test('POST /doctors 400 (master) - missing password', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('password')
-})
-
-test('POST /doctors 400 (master) - invalid role', async () => {
-  const { status, body } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: masterKey, email: 'd@d.com', password: '123456', role: 'invalid' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('role')
-})
-
-test('POST /doctors 401 (admin)', async () => {
-  const { status } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: adminSession, email: 'd@d.com', password: '123456' })
-  expect(status).toBe(401)
-})
-
-test('POST /doctors 401 (doctor)', async () => {
-  const { status } = await request(app())
-    .post(apiRoot)
-    .send({ access_token: session1, email: 'd@d.com', password: '123456' })
-  expect(status).toBe(401)
+  expect(typeof body).toEqual('object')
+  expect(body.email).toEqual('test')
+  expect(body.password).toEqual('test')
+  expect(body.name).toEqual('test')
+  expect(body.picture).toEqual('test')
+  expect(body.specialties).toEqual('test')
+  expect(body.qualifications).toEqual('test')
+  expect(body.rating).toEqual('test')
 })
 
 test('POST /doctors 401', async () => {
   const { status } = await request(app())
-    .post(apiRoot)
-    .send({ email: 'd@d.com', password: '123456' })
+    .post(`${apiRoot}`)
   expect(status).toBe(401)
 })
 
-test('PUT /doctors/me 200 (doctor)', async () => {
+test('GET /doctors 200 (master)', async () => {
   const { status, body } = await request(app())
-    .put(apiRoot + '/me')
-    .send({ access_token: session1, name: 'test' })
+    .get(`${apiRoot}`)
+    .query({ access_token: masterKey })
   expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.name).toBe('test')
+  expect(Array.isArray(body.rows)).toBe(true)
+  expect(Number.isNaN(body.count)).toBe(false)
 })
 
-test('PUT /doctors/me 200 (doctor)', async () => {
-  const { status, body } = await request(app())
-    .put(apiRoot + '/me')
-    .send({ access_token: session1, email: 'test@test.com' })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.email).toBe('a@a.com')
-})
-
-test('PUT /doctors/me 401', async () => {
+test('GET /doctors 401', async () => {
   const { status } = await request(app())
-    .put(apiRoot + '/me')
-    .send({ name: 'test' })
+    .get(`${apiRoot}`)
   expect(status).toBe(401)
 })
 
-test('PUT /doctors/:id 200 (doctor)', async () => {
+test('GET /doctors/:id 200 (master)', async () => {
   const { status, body } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: session1, name: 'test' })
+    .get(`${apiRoot}/${doctor.id}`)
+    .query({ access_token: masterKey })
   expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.name).toBe('test')
+  expect(typeof body).toEqual('object')
+  expect(body.id).toEqual(doctor.id)
 })
 
-test('PUT /doctors/:id 200 (doctor)', async () => {
-  const { status, body } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: session1, email: 'test@test.com' })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.email).toBe('a@a.com')
-})
-
-test('PUT /doctors/:id 200 (admin)', async () => {
-  const { status, body } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: adminSession, name: 'test' })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.name).toBe('test')
-})
-
-test('PUT /doctors/:id 401 (doctor) - another doctor', async () => {
+test('GET /doctors/:id 401', async () => {
   const { status } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: session2, name: 'test' })
+    .get(`${apiRoot}/${doctor.id}`)
   expect(status).toBe(401)
+})
+
+test('GET /doctors/:id 404 (master)', async () => {
+  const { status } = await request(app())
+    .get(apiRoot + '/123456789098765432123456')
+    .query({ access_token: masterKey })
+  expect(status).toBe(404)
+})
+
+test('PUT /doctors/:id 200 (master)', async () => {
+  const { status, body } = await request(app())
+    .put(`${apiRoot}/${doctor.id}`)
+    .send({ access_token: masterKey, email: 'test', password: 'test', name: 'test', picture: 'test', specialties: 'test', qualifications: 'test', rating: 'test' })
+  expect(status).toBe(200)
+  expect(typeof body).toEqual('object')
+  expect(body.id).toEqual(doctor.id)
+  expect(body.email).toEqual('test')
+  expect(body.password).toEqual('test')
+  expect(body.name).toEqual('test')
+  expect(body.picture).toEqual('test')
+  expect(body.specialties).toEqual('test')
+  expect(body.qualifications).toEqual('test')
+  expect(body.rating).toEqual('test')
 })
 
 test('PUT /doctors/:id 401', async () => {
   const { status } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}`)
-    .send({ name: 'test' })
+    .put(`${apiRoot}/${doctor.id}`)
   expect(status).toBe(401)
 })
 
-test('PUT /doctors/:id 404 (admin)', async () => {
+test('PUT /doctors/:id 404 (master)', async () => {
   const { status } = await request(app())
     .put(apiRoot + '/123456789098765432123456')
-    .send({ access_token: adminSession, name: 'test' })
+    .send({ access_token: masterKey, email: 'test', password: 'test', name: 'test', picture: 'test', specialties: 'test', qualifications: 'test', rating: 'test' })
   expect(status).toBe(404)
 })
 
-const passwordMatch = async (password, doctorId) => {
-  const doctor = await Doctor.findById(doctorId)
-  return !!await doctor.authenticate(password)
-}
-
-test('PUT /doctors/me/password 200 (doctor)', async () => {
-  const { status, body } = await request(app())
-    .put(apiRoot + '/me/password')
-    .auth('a@a.com', '123456')
-    .send({ password: '654321' })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.email).toBe('a@a.com')
-  expect(await passwordMatch('654321', body.id)).toBe(true)
-})
-
-test('PUT /doctors/me/password 400 (doctor) - invalid password', async () => {
-  const { status, body } = await request(app())
-    .put(apiRoot + '/me/password')
-    .auth('a@a.com', '123456')
-    .send({ password: '321' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('password')
-})
-
-test('PUT /doctors/me/password 401 (doctor) - invalid authentication method', async () => {
+test('DELETE /doctors/:id 204 (master)', async () => {
   const { status } = await request(app())
-    .put(apiRoot + '/me/password')
-    .send({ access_token: session1, password: '654321' })
-  expect(status).toBe(401)
-})
-
-test('PUT /doctors/me/password 401', async () => {
-  const { status } = await request(app())
-    .put(apiRoot + '/me/password')
-    .send({ password: '654321' })
-  expect(status).toBe(401)
-})
-
-test('PUT /doctors/:id/password 200 (doctor)', async () => {
-  const { status, body } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}/password`)
-    .auth('a@a.com', '123456')
-    .send({ password: '654321' })
-  expect(status).toBe(200)
-  expect(typeof body).toBe('object')
-  expect(body.email).toBe('a@a.com')
-  expect(await passwordMatch('654321', body.id)).toBe(true)
-})
-
-test('PUT /doctors/:id/password 400 (doctor) - invalid password', async () => {
-  const { status, body } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}/password`)
-    .auth('a@a.com', '123456')
-    .send({ password: '321' })
-  expect(status).toBe(400)
-  expect(typeof body).toBe('object')
-  expect(body.param).toBe('password')
-})
-
-test('PUT /doctors/:id/password 401 (doctor) - another doctor', async () => {
-  const { status } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}/password`)
-    .auth('b@b.com', '123456')
-    .send({ password: '654321' })
-  expect(status).toBe(401)
-})
-
-test('PUT /doctors/:id/password 401 (doctor) - invalid authentication method', async () => {
-  const { status } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}/password`)
-    .send({ access_token: session1, password: '654321' })
-  expect(status).toBe(401)
-})
-
-test('PUT /doctors/:id/password 401', async () => {
-  const { status } = await request(app())
-    .put(`${apiRoot}/${doctor1.id}/password`)
-    .send({ password: '654321' })
-  expect(status).toBe(401)
-})
-
-test('PUT /doctors/:id/password 404 (doctor)', async () => {
-  const { status } = await request(app())
-    .put(apiRoot + '/123456789098765432123456/password')
-    .auth('a@a.com', '123456')
-    .send({ password: '654321' })
-  expect(status).toBe(404)
-})
-
-test('DELETE /doctors/:id 204 (admin)', async () => {
-  const { status } = await request(app())
-    .delete(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: adminSession })
+    .delete(`${apiRoot}/${doctor.id}`)
+    .query({ access_token: masterKey })
   expect(status).toBe(204)
-})
-
-test('DELETE /doctors/:id 401 (doctor)', async () => {
-  const { status } = await request(app())
-    .delete(`${apiRoot}/${doctor1.id}`)
-    .send({ access_token: session1 })
-  expect(status).toBe(401)
 })
 
 test('DELETE /doctors/:id 401', async () => {
   const { status } = await request(app())
-    .delete(`${apiRoot}/${doctor1.id}`)
+    .delete(`${apiRoot}/${doctor.id}`)
   expect(status).toBe(401)
 })
 
-test('DELETE /doctors/:id 404 (admin)', async () => {
+test('DELETE /doctors/:id 404 (master)', async () => {
   const { status } = await request(app())
     .delete(apiRoot + '/123456789098765432123456')
-    .send({ access_token: adminSession })
+    .query({ access_token: masterKey })
   expect(status).toBe(404)
 })

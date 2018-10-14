@@ -5,6 +5,7 @@ import passwordReset from './password-reset'
 import appointments from './appointments'
 import timeslot from './timeslot'
 import doctor from './doctor'
+import doctor from './doctor'
 
 const router = new Router()
 
@@ -36,6 +37,7 @@ router.use('/auth', auth)
 router.use('/password-resets', passwordReset)
 router.use('/appointments', appointments)
 router.use('/timeslots', timeslot)
+router.use('/doctors', doctor)
 router.use('/doctors', doctor)
 
 export default router
