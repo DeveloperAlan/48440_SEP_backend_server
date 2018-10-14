@@ -43,13 +43,13 @@ export const create = ({ bodymen: { body } }, res, next) =>
       }
     })
 
-export const update = ({ bodymen: { body }, params, doctor }, res, next) =>
-  Doctor.findById(params.id === 'me' ? doctor.id : params.id)
+export const update = ({ bodymen: { body }, params, user }, res, next) =>
+  Doctor.findById(params.id === 'me' ? user.id : params.id)
     .then(notFound(res))
     .then((result) => {
       if (!result) return null
-      const isAdmin = doctor.role === 'admin'
-      const isSelfUpdate = doctor.id === result.id
+      const isAdmin = user.role === 'admin'
+      const isSelfUpdate = user.id === result.id
       if (!isSelfUpdate && !isAdmin) {
         res.status(401).json({
           valid: false,
@@ -64,12 +64,12 @@ export const update = ({ bodymen: { body }, params, doctor }, res, next) =>
     .then(success(res))
     .catch(next)
 
-export const updatePassword = ({ bodymen: { body }, params, doctor }, res, next) =>
-  Doctor.findById(params.id === 'me' ? doctor.id : params.id)
+export const updatePassword = ({ bodymen: { body }, params, user }, res, next) =>
+  Doctor.findById(params.id === 'me' ? user.id : params.id)
     .then(notFound(res))
     .then((result) => {
       if (!result) return null
-      const isSelfUpdate = doctor.id === result.id
+      const isSelfUpdate = user.id === result.id
       if (!isSelfUpdate) {
         res.status(401).json({
           valid: false,
